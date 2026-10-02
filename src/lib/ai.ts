@@ -1,23 +1,48 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const MODELS = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function callAI<T>(
   system: string,
   userContent: string,
   schema: z.ZodType<T>
 ): Promise<T> {
-  const res = await client.messages.create({
-    model: "claude-sonnet-5-5",
-    max_tokens: 4000,
-    system,
-    messages: [{ role: "user", content: userContent }],
-  });
+  let lastError: unknown;
 
-  const block = res.content.find((b) => b.type === "text");
-  const raw = block && block.type === "text" ? block.text : "";
-  const cleaned = raw.replace(/```json|```/g, "").trim();
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await ai.models.generateContent({
+          model,
+          contents: userContent,
+          config: {
+            systemInstruction: system,
+            responseMimeType: "application/json",
+            maxOutputTokens: 8192,
+          },
+        });
 
-  return schema.parse(JSON.parse(cleaned));
+        const raw = res.text ?? "";
+        const cleaned = raw.replace(/```json|```/g, "").trim();
+        return schema.parse(JSON.parse(cleaned));
+      } catch (err) {
+        lastError = err;
+        const status = (err as { status?: number }).status;
+
+        if (status === 503 || status === 429) {
+          await sleep(2000 * (attempt + 1)); // busy: wait, then retry
+          continue;
+        }
+        if (status === 404) break; // model not available: try next model
+        throw err;
+      }
+    }
+  }
+
+  throw lastError;
 }
