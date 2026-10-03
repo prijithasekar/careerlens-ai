@@ -1,9 +1,11 @@
 "use client";
-import ExtraSections from "@/components/ExtraSections";
+
 import { useState } from "react";
 import type { Analysis, JobProfile, ResumeProfile } from "@/lib/schema";
-import ProgressTracker from "@/components/ProgressTracker";
+import ExtraSections from "@/components/ExtraSections";
 import ProfileSections from "@/components/ProfileSections";
+import ProgressTracker from "@/components/ProgressTracker";
+
 const LABELS: Record<string, string> = {
   technicalSkills: "Technical Skills",
   tools: "Tools",
@@ -11,6 +13,15 @@ const LABELS: Record<string, string> = {
   projects: "Projects",
   softSkills: "Soft Skills",
 };
+
+const TABS = ["Overview", "Roadmap & Progress", "Resume & Job", "Improve & Interview"] as const;
+type Tab = (typeof TABS)[number];
+
+function scoreColor(score: number) {
+  if (score >= 75) return "text-green-600";
+  if (score >= 50) return "text-amber-500";
+  return "text-red-600";
+}
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -20,6 +31,8 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [resume, setResume] = useState<ResumeProfile | null>(null);
   const [job, setJob] = useState<JobProfile | null>(null);
+  const [tab, setTab] = useState<Tab>("Overview");
+
   async function handleAnalyze() {
     setError("");
     setAnalysis(null);
@@ -42,8 +55,9 @@ export default function Home() {
       const d2 = await r2.json();
       if (!r2.ok) throw new Error(d2.error);
       setAnalysis(d2.analysis);
-            setResume(d2.resume);
+      setResume(d2.resume);
       setJob(d2.job);
+      setTab("Overview");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -52,16 +66,18 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl p-6 space-y-8">
-      <header className="text-center space-y-1">
+    <main className="mx-auto max-w-4xl space-y-8 p-6">
+      <header className="space-y-1 text-center">
         <h1 className="text-4xl font-bold">CareerLens AI</h1>
-        <p className="text-gray-500">See how your resume matches your target job.</p>
+        <p className="text-gray-500">
+          See how your resume matches your target job, and how to become job-ready.
+        </p>
       </header>
 
       {/* Input section */}
-      <section className="rounded-xl border p-5 space-y-4">
+      <section className="space-y-4 rounded-xl border p-5">
         <div>
-          <label className="block font-medium mb-1">1. Upload resume (PDF)</label>
+          <label className="mb-1 block font-medium">1. Upload resume (PDF)</label>
           <input
             type="file"
             accept="application/pdf"
@@ -69,7 +85,7 @@ export default function Home() {
           />
         </div>
         <div>
-          <label className="block font-medium mb-1">2. Paste job description</label>
+          <label className="mb-1 block font-medium">2. Paste job description</label>
           <textarea
             value={jd}
             onChange={(e) => setJd(e.target.value)}
@@ -83,7 +99,7 @@ export default function Home() {
           disabled={loading}
           className="rounded-lg bg-indigo-600 px-5 py-2 font-medium text-white disabled:opacity-50"
         >
-          {loading ? "Analyzing... (takes ~30 seconds)" : "Analyze"}
+          {loading ? "Analyzing... (takes up to a minute)" : "Analyze"}
         </button>
         {error && <p className="text-red-600">{error}</p>}
       </section>
@@ -91,64 +107,107 @@ export default function Home() {
       {/* Results */}
       {analysis && (
         <div className="space-y-6">
-          <section className="rounded-xl border p-6 text-center">
-            <p className="text-gray-500">Overall Match</p>
-            <p className="text-6xl font-bold text-indigo-600">{analysis.overallMatch}%</p>
-          </section>
-
-          <section className="rounded-xl border p-5 space-y-3">
-            <h2 className="text-xl font-semibold">Skill Analysis</h2>
-            {Object.entries(analysis.breakdown).map(([key, value]) => (
-              <div key={key}>
-                <div className="flex justify-between text-sm">
-                  <span>{LABELS[key] ?? key}</span>
-                  <span>{value}%</span>
-                </div>
-                <div className="h-2 rounded bg-gray-200">
-                  <div className="h-2 rounded bg-indigo-500" style={{ width: `${value}%` }} />
-                </div>
-              </div>
+          {/* Tab bar */}
+          <div className="sticky top-0 z-10 flex flex-wrap gap-2 bg-white/90 py-2 backdrop-blur">
+            {TABS.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-full px-4 py-2 text-sm font-medium ${
+                  tab === t
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {t}
+              </button>
             ))}
-          </section>
+          </div>
 
-          <section className="rounded-xl border p-5 space-y-2">
-            <h2 className="text-xl font-semibold">Matching Skills</h2>
-            <div className="flex flex-wrap gap-2">
-              {analysis.matchingSkills.map((s) => (
-                <span key={s} className="rounded-full bg-green-100 px-3 py-1 text-green-800">
-                  {s}
-                </span>
-              ))}
+          {tab === "Overview" && (
+            <div className="space-y-6">
+              <section className="rounded-xl border p-6 text-center">
+                <p className="text-gray-500">Overall Match</p>
+                <p className={`text-6xl font-bold ${scoreColor(analysis.overallMatch)}`}>
+                  {analysis.overallMatch}%
+                </p>
+              </section>
+
+              <section className="space-y-3 rounded-xl border p-5">
+                <h2 className="text-xl font-semibold">Skill Analysis</h2>
+                {Object.entries(analysis.breakdown).map(([key, value]) => (
+                  <div key={key}>
+                    <div className="flex justify-between text-sm">
+                      <span>{LABELS[key] ?? key}</span>
+                      <span>{value}%</span>
+                    </div>
+                    <div className="h-2 rounded bg-gray-200">
+                      <div
+                        className="h-2 rounded bg-indigo-500"
+                        style={{ width: `${value}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </section>
+
+              <section className="space-y-2 rounded-xl border p-5">
+                <h2 className="text-xl font-semibold">Matching Skills</h2>
+                <div className="flex flex-wrap gap-2">
+                  {analysis.matchingSkills.map((s) => (
+                    <span
+                      key={s}
+                      className="rounded-full bg-green-100 px-3 py-1 text-green-800"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </section>
+
+              <section className="space-y-3 rounded-xl border p-5">
+                <h2 className="text-xl font-semibold">Missing Skills</h2>
+                {analysis.missingSkills.map((m) => (
+                  <div key={m.skill} className="rounded-lg bg-red-50 p-3">
+                    <p className="font-medium text-red-800">
+                      {m.skill} <span className="text-xs">({m.importance})</span>
+                    </p>
+                    <p className="text-sm text-gray-700">{m.why}</p>
+                  </div>
+                ))}
+              </section>
             </div>
-          </section>
+          )}
 
-          <section className="rounded-xl border p-5 space-y-3">
-            <h2 className="text-xl font-semibold">Missing Skills</h2>
-            {analysis.missingSkills.map((m) => (
-              <div key={m.skill} className="rounded-lg bg-red-50 p-3">
-                <p className="font-medium text-red-800">
-                  {m.skill} <span className="text-xs">({m.importance})</span>
-                </p>
-                <p className="text-sm text-gray-700">{m.why}</p>
-              </div>
-            ))}
-          </section>
+          {tab === "Roadmap & Progress" && (
+            <div className="space-y-6">
+              <section className="space-y-3 rounded-xl border p-5">
+                <h2 className="text-xl font-semibold">Your Learning Roadmap</h2>
+                {analysis.roadmap.map((w) => (
+                  <div key={w.week} className="rounded-lg bg-indigo-50 p-3">
+                    <p className="font-medium">
+                      Week {w.week}: {w.title}
+                    </p>
+                    <p className="text-sm text-gray-600">{w.topics.join(" · ")}</p>
+                    <p className="text-sm">Task: {w.task}</p>
+                  </div>
+                ))}
+              </section>
+              <ProgressTracker analysis={analysis} />
+            </div>
+          )}
 
-          <section className="rounded-xl border p-5 space-y-3">
-            <h2 className="text-xl font-semibold">Your Learning Roadmap</h2>
-            {analysis.roadmap.map((w) => (
-              <div key={w.week} className="rounded-lg bg-indigo-50 p-3">
-                <p className="font-medium">
-                  Week {w.week}: {w.title}
-                </p>
-                <p className="text-sm text-gray-600">{w.topics.join(" · ")}</p>
-                <p className="text-sm">Task: {w.task}</p>
-              </div>
-            ))}
-          </section>
-                    <ExtraSections analysis={analysis} />
-                              {resume && job && <ProfileSections resume={resume} job={job} />}
-                              <ProgressTracker analysis={analysis} />
+          {tab === "Resume & Job" && resume && job && (
+            <div className="space-y-6">
+              <ProfileSections resume={resume} job={job} />
+            </div>
+          )}
+
+          {tab === "Improve & Interview" && (
+            <div className="space-y-6">
+              <ExtraSections analysis={analysis} />
+            </div>
+          )}
         </div>
       )}
     </main>
