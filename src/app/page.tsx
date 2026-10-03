@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Analysis } from "@/lib/schema";
-
+import ProgressTracker from "@/components/ProgressTracker";
 const LABELS: Record<string, string> = {
   technicalSkills: "Technical Skills",
   tools: "Tools",
@@ -142,6 +142,7 @@ export default function Home() {
               </div>
             ))}
           </section>
+                    <ProgressTracker analysis={analysis} />
         </div>
       )}
     </main>
