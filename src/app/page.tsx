@@ -5,7 +5,7 @@ import type { Analysis, JobProfile, ResumeProfile } from "@/lib/schema";
 import ExtraSections from "@/components/ExtraSections";
 import ProfileSections from "@/components/ProfileSections";
 import ProgressTracker from "@/components/ProgressTracker";
-
+import WhatIfSimulator from "@/components/WhatIfSimulator";
 const LABELS: Record<string, string> = {
   technicalSkills: "Technical Skills",
   tools: "Tools",
@@ -176,7 +176,8 @@ export default function Home() {
                   </div>
                 ))}
               </section>
-            </div>
+                            <WhatIfSimulator analysis={analysis} />
+                          </div>
           )}
 
           {tab === "Roadmap & Progress" && (
@@ -193,6 +194,7 @@ export default function Home() {
                   </div>
                 ))}
               </section>
+
               <ProgressTracker analysis={analysis} />
             </div>
           )}
