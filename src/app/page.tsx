@@ -1,5 +1,5 @@
 "use client";
-
+import ExtraSections from "@/components/ExtraSections";
 import { useState } from "react";
 import type { Analysis } from "@/lib/schema";
 import ProgressTracker from "@/components/ProgressTracker";
@@ -142,6 +142,7 @@ export default function Home() {
               </div>
             ))}
           </section>
+                    <ExtraSections analysis={analysis} />
                     <ProgressTracker analysis={analysis} />
         </div>
       )}
