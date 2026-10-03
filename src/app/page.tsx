@@ -1,8 +1,9 @@
 "use client";
 import ExtraSections from "@/components/ExtraSections";
 import { useState } from "react";
-import type { Analysis } from "@/lib/schema";
+import type { Analysis, JobProfile, ResumeProfile } from "@/lib/schema";
 import ProgressTracker from "@/components/ProgressTracker";
+import ProfileSections from "@/components/ProfileSections";
 const LABELS: Record<string, string> = {
   technicalSkills: "Technical Skills",
   tools: "Tools",
@@ -17,7 +18,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
-
+  const [resume, setResume] = useState<ResumeProfile | null>(null);
+  const [job, setJob] = useState<JobProfile | null>(null);
   async function handleAnalyze() {
     setError("");
     setAnalysis(null);
@@ -40,6 +42,8 @@ export default function Home() {
       const d2 = await r2.json();
       if (!r2.ok) throw new Error(d2.error);
       setAnalysis(d2.analysis);
+            setResume(d2.resume);
+      setJob(d2.job);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -143,7 +147,8 @@ export default function Home() {
             ))}
           </section>
                     <ExtraSections analysis={analysis} />
-                    <ProgressTracker analysis={analysis} />
+                              {resume && job && <ProfileSections resume={resume} job={job} />}
+                              <ProgressTracker analysis={analysis} />
         </div>
       )}
     </main>
